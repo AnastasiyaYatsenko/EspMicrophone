@@ -10,14 +10,18 @@
 
 #include "painlessMesh.h"
 #include <Arduino_JSON.h>
+#include "VolAnalyzer.h"
 
 #define   MESH_PREFIX     "EspMicrophoneMesh"
 #define   MESH_PASSWORD   "somethingSneaky"
 #define   MESH_PORT       5555
 
 //Number for this node
-int nodeNumber = 2;
-unsigned int soundVolume;
+int nodeNumber = 4;
+unsigned long last_sent = 0;
+
+int soundVolume;
+VolAnalyzer analyzer(A2);
 
 Scheduler userScheduler; // to control your personal task
 painlessMesh  mesh;
@@ -77,8 +81,14 @@ String getReadings () {
 }
 
 void sendMessage() {
+//  int t1 = millis();
+//  if (analyzer.tick()) {
+//    Serial.print("VolAnalyzer: ");
+//    Serial.println(analyzer.getVol());
+//  }
+//  Serial.print("Millis: ");
+//  Serial.println(millis()-t1);
   soundVolume = measureSoundAmplitude();
-//  soundVolume = analogRead(0);
   if (soundVolume>100){
     String msg = getReadings();
     msg += mesh.getNodeId();
@@ -134,11 +144,23 @@ void setup() {
   mesh.onChangedConnections(&changedConnectionCallback);
   mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
 
-  userScheduler.addTask( taskSendMessage );
-  taskSendMessage.enable();
+//  userScheduler.addTask( taskSendMessage );
+//  taskSendMessage.enable();
 }
 
 void loop() {
   // it will run the user scheduler as well
   mesh.update();
+//  int vol;
+  if (analyzer.tick()) {
+    soundVolume = analyzer.getVol();
+//    Serial.print("VolAnalyzer: ");
+//    Serial.println(analyzer.getVol());
+  }
+  if ((soundVolume>70)&&(millis()-last_sent>=100)){
+    String msg = getReadings();
+    msg += mesh.getNodeId();
+    mesh.sendBroadcast( msg );
+    last_sent=millis();
+  }
 }
