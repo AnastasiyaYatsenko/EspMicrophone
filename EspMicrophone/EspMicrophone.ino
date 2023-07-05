@@ -5,7 +5,7 @@
  *             2. Хранить n последних (не подозрительных) замеров для формирования среднего значения. 
  *             Это нужно для корректного реагирования: на центральной улице и в переулке будут разные показатели "нормального" шума, так же будут различаться в дневное и ночное время.
  *             Таким образом, не будет завышенного ожидания фонового шума для безлюдных мест, а так же не будет заниженных - для людных
- *             
+ *             3. Засекать, сколько по длительности громикй звук
  */
 
 #include "painlessMesh.h"
@@ -19,6 +19,7 @@
 //Number for this node
 int nodeNumber = 4;
 unsigned long last_sent = 0;
+unsigned long loud_start = -1;
 
 int soundVolume;
 VolAnalyzer analyzer(A2);
@@ -149,18 +150,27 @@ void setup() {
 }
 
 void loop() {
-  // it will run the user scheduler as well
   mesh.update();
-//  int vol;
   if (analyzer.tick()) {
     soundVolume = analyzer.getVol();
-//    Serial.print("VolAnalyzer: ");
-//    Serial.println(analyzer.getVol());
   }
-  if ((soundVolume>70)&&(millis()-last_sent>=100)){
-    String msg = getReadings();
-    msg += mesh.getNodeId();
-    mesh.sendBroadcast( msg );
-    last_sent=millis();
+  if ((soundVolume>70){
+//    (millis()-last_sent>=100))
+    if (loud_start==-1){    loud_start = millis();    }
+    if ((millis()-loud_start>=300)&&(millis()-last_sent>=100)){
+      String msg = getReadings();
+      msg += mesh.getNodeId();
+      mesh.sendBroadcast( msg );
+      last_sent=millis();
+    }
   }
+  else {
+    if (loud_start!=-1){    loud_start = -1;    }
+  }
+//  if ((soundVolume>70)&&(millis()-last_sent>=100)){
+//    String msg = getReadings();
+//    msg += mesh.getNodeId();
+//    mesh.sendBroadcast( msg );
+//    last_sent=millis();
+//  }
 }
