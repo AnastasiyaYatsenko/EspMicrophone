@@ -53,7 +53,7 @@ int noise_vol(){
 
 float get_delta(int vol){
   int noise = noise_vol();
-  float delta = abs(vol-noise)/100.0f;
+  float delta = (abs(vol-noise)/100.0f)*100;
   return delta;
 }
 
