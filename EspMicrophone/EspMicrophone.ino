@@ -20,9 +20,10 @@
 int nodeNumber = 4;
 unsigned long last_sent = 0;
 unsigned long loud_start = -1;
+unsigned long last_background = 0;
 
-int NOISE_COUNT = 20;
-int[NOISE_COUNT] background_noise;
+const int NOISE_COUNT = 20;
+int background_noise[NOISE_COUNT];
 
 int soundVolume;
 VolAnalyzer analyzer(A2);
@@ -44,23 +45,16 @@ void write_noise(int vol){
 
 int noise_vol(){
   int sum = 0;
-  for (int i=; i<NOISE_COUNT; i++){
+  for (int i=0; i<NOISE_COUNT; i++){
     sum += background_noise[i];
   }
   return sum/NOISE_COUNT;
 }
 
-float get_delta(vol){
-  int noise_vol = noise_vol();
-  float delta = abs(vol-noise_vol)/100.0f;
+float get_delta(int vol){
+  int noise = noise_vol();
+  float delta = abs(vol-noise)/100.0f;
   return delta;
-}
-
-void write_new_noise(int volume){
-  if (background_noise.size==20){
-    background_noise.remove(19);
-  }
-  background_noise.push
 }
 
 String getReadings () {
@@ -80,16 +74,16 @@ void sendMessage() {
 //  }
 //  Serial.print("Millis: ");
 //  Serial.println(millis()-t1);
-  soundVolume = measureSoundAmplitude();
-  if (soundVolume>100){
-    String msg = getReadings();
-    msg += mesh.getNodeId();
-    mesh.sendBroadcast( msg );
-  }
+//  soundVolume = measureSoundAmplitude();
+//  if (soundVolume>100){
+//    String msg = getReadings();
+//    msg += mesh.getNodeId();
+//    mesh.sendBroadcast( msg );
+//  }
 //  String msg = getReadings();
 //  msg += mesh.getNodeId();
 //  mesh.sendBroadcast( msg );
-  taskSendMessage.setInterval(TASK_SECOND * 1);
+//  taskSendMessage.setInterval(TASK_SECOND * 1);
 }
 
 void receivedCallback( uint32_t from, String &msg ) {
@@ -145,7 +139,7 @@ void loop() {
   }
   float delta = get_delta(soundVolume);
   
-  if ((delta>=50.0f)||((delta>20.0f)&&(soundVolume>70))){
+  if ((delta>=50.0f)||((delta>=20.0f)&&(soundVolume>70))){
     if (loud_start==-1){    loud_start = millis();    }
     if ((millis()-loud_start>=300)&&(millis()-last_sent>=100)){
       String msg = getReadings();
@@ -156,6 +150,9 @@ void loop() {
   }
   else {
     if (loud_start!=-1){    loud_start = -1;    }
-    write_new_noise(soundVolume);
+    if (millis()-last_background>500){
+      write_noise(soundVolume);
+      last_background = millis();
+    }
   }
 }
