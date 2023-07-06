@@ -21,6 +21,9 @@ int nodeNumber = 4;
 unsigned long last_sent = 0;
 unsigned long loud_start = -1;
 
+int NOISE_COUNT = 20;
+int[NOISE_COUNT] background_noise;
+
 int soundVolume;
 VolAnalyzer analyzer(A2);
 
@@ -32,44 +35,32 @@ void sendMessage() ; // Prototype so PlatformIO doesn't complain
 
 Task taskSendMessage( TASK_SECOND * 1 , TASK_FOREVER, &sendMessage );
 
-unsigned int measureSoundAmplitude() {
-  const int sampleWindow = 50;                     // Время измерения в мс
-  unsigned int sample;
-  // Cохраняем текущие значение millis в startMillis
-  unsigned long startMillis= millis();         
-  // Создаем переменною peakToPeak, где храним разницу между минимальным и максимальным сигналом
-  unsigned int peakToPeak = 0;                
- 
-  // signalMax максимальным значением
-  unsigned int signalMax = 0; 
-  // signalMin минимальным значением                 
-  unsigned int signalMin = 1024;              
- 
-  // Пока в startMillis содержащиеся больше заданного sampleWindow, выполняется код в цикле while
-  while (millis() - startMillis < sampleWindow) 
-  {
-    // Сохраняем значение переменной sample считанное с аналогового входе 0
-    sample = analogRead(2);    
-    // Если значение sample меньше 1024, то есть максимальное значение, читаемое на аналоговом порту                
-    if (sample < 1024)                         
-    {
-      // Если значение sample больше максимального значения, найденного в signalMax
-      if (sample > signalMax)                
-      {
-        // Обновление значения signalMax, содержащимся в sample
-        signalMax = sample; 
-      }
-      //  В противном случае, если значение sample меньше, чем signalMin
-      else if (sample < signalMin) 
-      {
-        // Обновление значения signalMin, содержащимся в sample
-        signalMin = sample;  
-      }
-    }
+void write_noise(int vol){
+  for (int i=NOISE_COUNT-1; i>0; i--){
+    background_noise[i]=background_noise[i-1];
   }
-  //  В переменной peakToPeak будет хранится разницу между максимальным значением и минимальным значением.
-  peakToPeak = signalMax - signalMin; 
-  return peakToPeak;
+  background_noise[0]=vol;
+}
+
+int noise_vol(){
+  int sum = 0;
+  for (int i=; i<NOISE_COUNT; i++){
+    sum += background_noise[i];
+  }
+  return sum/NOISE_COUNT;
+}
+
+float get_delta(vol){
+  int noise_vol = noise_vol();
+  float delta = abs(vol-noise_vol)/100.0f;
+  return delta;
+}
+
+void write_new_noise(int volume){
+  if (background_noise.size==20){
+    background_noise.remove(19);
+  }
+  background_noise.push
 }
 
 String getReadings () {
@@ -101,11 +92,6 @@ void sendMessage() {
   taskSendMessage.setInterval(TASK_SECOND * 1);
 }
 
-// Needed for painless library
-//void receivedCallback( uint32_t from, String &msg ) {
-//  Serial.printf("startHere: Received from %u msg=%s\n", from, msg.c_str());
-//}
-
 void receivedCallback( uint32_t from, String &msg ) {
   Serial.printf("Received from %u msg=%s\n", from, msg.c_str());
   JSONVar myObject = JSON.parse(msg.c_str());
@@ -119,7 +105,6 @@ void receivedCallback( uint32_t from, String &msg ) {
   Serial.print("Time: ");
   Serial.println(node_time);
 }
-
 
 void newConnectionCallback(uint32_t nodeId) {
     Serial.printf("--> startHere: New Connection, nodeId = %u\n", nodeId);
@@ -145,6 +130,10 @@ void setup() {
   mesh.onChangedConnections(&changedConnectionCallback);
   mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
 
+  for (int i=0; i<NOISE_COUNT; i++){
+    background_noise[i] = 0;
+  }
+
 //  userScheduler.addTask( taskSendMessage );
 //  taskSendMessage.enable();
 }
@@ -154,8 +143,9 @@ void loop() {
   if (analyzer.tick()) {
     soundVolume = analyzer.getVol();
   }
-  if ((soundVolume>70){
-//    (millis()-last_sent>=100))
+  float delta = get_delta(soundVolume);
+  
+  if ((delta>=50.0f)||((delta>20.0f)&&(soundVolume>70))){
     if (loud_start==-1){    loud_start = millis();    }
     if ((millis()-loud_start>=300)&&(millis()-last_sent>=100)){
       String msg = getReadings();
@@ -166,11 +156,6 @@ void loop() {
   }
   else {
     if (loud_start!=-1){    loud_start = -1;    }
+    write_new_noise(soundVolume);
   }
-//  if ((soundVolume>70)&&(millis()-last_sent>=100)){
-//    String msg = getReadings();
-//    msg += mesh.getNodeId();
-//    mesh.sendBroadcast( msg );
-//    last_sent=millis();
-//  }
 }
