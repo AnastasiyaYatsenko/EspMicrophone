@@ -22,6 +22,14 @@ unsigned long last_sent = 0;
 unsigned long loud_start = -1;
 unsigned long last_background = 0;
 
+/*
+ * No.1 - 3550
+ * No.2 - 
+ * No.3 - 3550
+ * No.4 - 3650
+ */
+unsigned int ceil_vol = 3650;
+
 const int NOISE_COUNT = 20;
 int background_noise[NOISE_COUNT];
 
@@ -135,16 +143,21 @@ void setup() {
 void loop() {
   mesh.update();
   if (analyzer.tick()) {
-    soundVolume = analyzer.getVol();
+//    soundVolume = analyzer.getVol();
+    soundVolume = analyzer.getRaw();
   }
   float delta = get_delta(soundVolume);
   
-  if ((delta>=50.0f)||((delta>=20.0f)&&(soundVolume>70))){
+  if ((delta>=50.0f)||((delta>=20.0f)&&(soundVolume>0.7*ceil_vol))){
     if (loud_start==-1){    loud_start = millis();    }
     if ((millis()-loud_start>=300)&&(millis()-last_sent>=100)){
       String msg = getReadings();
-      msg += mesh.getNodeId();
-      mesh.sendBroadcast( msg );
+      Serial.print("High volume ");
+      Serial.print(soundVolume);
+      Serial.print(" with delta ");
+      Serial.println(delta);
+//      msg += mesh.getNodeId();
+//      mesh.sendBroadcast( msg );
       last_sent=millis();
     }
   }
