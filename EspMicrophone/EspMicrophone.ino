@@ -17,14 +17,14 @@
 #define   MESH_PORT       5555
 
 //Number for this node
-int nodeNumber = 4;
+int nodeNumber = 2;
 unsigned long last_sent = 0;
 unsigned long loud_start = -1;
 unsigned long last_background = 0;
 
 /*
  * No.1 - 3550
- * No.2 - 
+ * No.2 - 3710
  * No.3 - 3550
  * No.4 - 3650
  */
@@ -61,7 +61,7 @@ int noise_vol(){
 
 float get_delta(int vol){
   int noise = noise_vol();
-  float delta = ((vol-noise)/100.0f)*100;
+  float delta = ((vol-noise)/float(ceil_vol))*100;
   return delta;
 }
 
@@ -147,6 +147,11 @@ void loop() {
     soundVolume = analyzer.getRaw();
   }
   float delta = get_delta(soundVolume);
+
+  Serial.print("Volume ");
+  Serial.print(soundVolume);
+  Serial.print(" with delta ");
+  Serial.println(delta);
   
   if ((delta>=50.0f)||((delta>=20.0f)&&(soundVolume>0.7*ceil_vol))){
     if (loud_start==-1){    loud_start = millis();    }
