@@ -19,7 +19,7 @@
 //Number for this node
 int nodeNumber = 2;
 unsigned long last_sent = 0;
-unsigned long loud_start = -1;
+unsigned long loud_start = 0;
 unsigned long last_background = 0;
 
 /*
@@ -99,7 +99,7 @@ void receivedCallback( uint32_t from, String &msg ) {
   JSONVar myObject = JSON.parse(msg.c_str());
   int node = myObject["node"];
   double sound = myObject["sound"];
-  double node_time = myObject["time"];
+  uint32_t node_time = myObject["time"];
   Serial.print("Node: ");
   Serial.println(node);
   Serial.print("Sound amplitude: ");
@@ -148,26 +148,26 @@ void loop() {
   }
   float delta = get_delta(soundVolume);
 
-  Serial.print("Volume ");
-  Serial.print(soundVolume);
-  Serial.print(" with delta ");
-  Serial.println(delta);
+//  Serial.print("Volume ");
+//  Serial.print(soundVolume);
+//  Serial.print(" with delta ");
+//  Serial.println(delta);
   
   if ((delta>=50.0f)||((delta>=20.0f)&&(soundVolume>0.7*ceil_vol))){
-    if (loud_start==-1){    loud_start = millis();    }
+    if (loud_start==0){    loud_start = millis();    }
     if ((millis()-loud_start>=300)&&(millis()-last_sent>=100)){
       String msg = getReadings();
       Serial.print("High volume ");
       Serial.print(soundVolume);
       Serial.print(" with delta ");
       Serial.println(delta);
-//      msg += mesh.getNodeId();
-//      mesh.sendBroadcast( msg );
+      msg += mesh.getNodeId();
+      mesh.sendBroadcast( msg );
       last_sent=millis();
     }
   }
   else {
-    if (loud_start!=-1){    loud_start = -1;    }
+    if (loud_start!=0){    loud_start = 0;    }
     if (millis()-last_background>500){
       write_noise(soundVolume);
       last_background = millis();
