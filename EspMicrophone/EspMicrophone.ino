@@ -17,7 +17,7 @@
 #define   MESH_PORT       5555
 
 //Number for this node
-int nodeNumber = 2;
+int nodeNumber = 4;
 unsigned long last_sent = 0;
 unsigned long loud_start = 0;
 unsigned long last_background = 0;
