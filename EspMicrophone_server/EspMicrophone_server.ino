@@ -16,6 +16,8 @@
 const int NODES_COUNT = 4;
 unsigned int net_state[NODES_COUNT][2];
 
+unsigned long last_sent = 0;
+
 Scheduler     userScheduler;
 painlessMesh  mesh;
 
@@ -32,7 +34,7 @@ void receivedCallback( uint32_t from, String &msg ) {
   Serial.print("; Time: ");
   Serial.println(node_time);
 
-  net_state[node-1][1] = sound; net_state[node-1][2] = node_time;
+  net_state[node-1][0] = sound; net_state[node-1][0] = node_time;
 }
 
 void newConnectionCallback(uint32_t nodeId) {
@@ -62,20 +64,22 @@ void setup() {
 void loop() {
   mesh.update();
   String msg = "There is a loud noise in areas of sensors: ";
+  bool changed = false;
   boolean is_area = false;
   for (int i=0; i<NODES_COUNT; i++){
     uint32_t time_passed = 0;
     uint32_t my_time = mesh.getNodeTime();
     //min = 60 000 000 microsec
-    if (my_time<net_state[i][2]){    time_passed = my_time+(71*60000000-net_state[i][2]);    }
-    else {    time_passed = my_time-net_state[i][2];    }
+    if (my_time<net_state[i][1]){    time_passed = my_time+(71*60000000-net_state[i][1]);    }
+    else {    time_passed = my_time-net_state[i][1];    }
     if (time_passed>=60000000){
-      net_state[i][1] = 0;
+      net_state[i][0] = 0;
     }
     if (net_state[i][1]>0){
       if (!is_area){
         msg += "(";
         is_area = true;
+        changed = true;
       }
       msg += " " + String(i+1);
     }
@@ -85,5 +89,13 @@ void loop() {
         is_area = false;
       }
     }
+    if (is_area && i==NODES_COUNT-1){
+      msg += " )";
+      is_area = false;
+    }
+  }
+  if (changed && (millis()-last_sent>=100)){
+    last_sent = millis();
+    Serial.println(msg);
   }
 }
